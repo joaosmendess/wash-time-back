@@ -2,7 +2,7 @@ import express from 'express';
 import connectDB from './utils/database';
 import dotenv from 'dotenv';
 import bookingRoutes from './routes/bookingRoutes';
-import washTypeRoutes from './routes/washTyperoutes';
+import washTypeRoutes from './routes/washTypeRoutes';
 
 dotenv.config();
 
