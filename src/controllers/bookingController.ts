@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import Booking from '../models/booking';
 import WashType from '../models/washType';
+import AvailableSlot from '../models/availabelSlot'; // Import do modelo de horários disponíveis
 
 export const createBooking = async (req: Request, res: Response) => {
   const { customerName, customerPhone, date, time, vehicleModel, washType } = req.body;
@@ -8,6 +9,12 @@ export const createBooking = async (req: Request, res: Response) => {
     const existingWashType = await WashType.findOne({ name: washType });
     if (!existingWashType) {
       return res.status(400).json({ message: 'Tipo de lavagem inválido' });
+    }
+
+    // Verificar se o horário está disponível
+    const availableSlot = await AvailableSlot.findOne({ date });
+    if (!availableSlot || !availableSlot.times.includes(time)) {
+      return res.status(400).json({ message: 'Horário não disponível' });
     }
 
     const newBooking = new Booking({ customerName, customerPhone, date, time, vehicleModel, washType });
@@ -19,6 +26,7 @@ export const createBooking = async (req: Request, res: Response) => {
   }
 };
 
+// Outras funções permanecem as mesmas
 export const getBookings = async (req: Request, res: Response) => {
   const { date } = req.query;
 
@@ -44,6 +52,16 @@ export const getBookings = async (req: Request, res: Response) => {
   }
 };
 
+export const getAllBookings = async (req: Request, res: Response) => {
+  try {
+    const bookings = await Booking.find({});
+    res.status(200).json(bookings);
+  } catch (error) {
+    console.error('Erro ao buscar todas as reservas:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 export const updateBooking = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { customerName, customerPhone, date, time, vehicleModel, washType } = req.body;
@@ -53,9 +71,15 @@ export const updateBooking = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Tipo de lavagem inválido' });
     }
 
+    // Verificar se o horário está disponível para a nova data e horário
+    const availableSlot = await AvailableSlot.findOne({ date });
+    if (!availableSlot || !availableSlot.times.includes(time)) {
+      return res.status(400).json({ message: 'Horário não disponível' });
+    }
+
     const updateBooking = await Booking.findByIdAndUpdate(id, { customerName, customerPhone, date, time, vehicleModel, washType }, { new: true });
     if (!updateBooking) {
-      return res.status(404).json({ message: 'Booking not found' });
+      return res.status(404).json({ message: 'Reserva não encontrada' });
     }
     res.status(200).json(updateBooking);
   } catch (error) {
@@ -69,9 +93,9 @@ export const deleteBooking = async (req: Request, res: Response) => {
   try {
     const deletedBooking = await Booking.findByIdAndDelete(id);
     if (!deletedBooking) {
-      return res.status(404).json({ message: 'Booking not found' });
+      return res.status(404).json({ message: 'Reserva não encontrada' });
     }
-    res.status(200).json({ message: 'Booking deleted successfully' });
+    res.status(200).json({ message: 'Reserva deletada com sucesso' });
   } catch (error) {
     console.error('Erro ao deletar a reserva:', error);
     res.status(500).json({ message: 'Server error' });
